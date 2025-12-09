@@ -1,0 +1,21 @@
+# requirements.txt
+# Dépendances Python pour le Projet RO - Localisation d'Hôpitaux
+
+# Solveur d'optimisation
+gurobipy>=11.0.0
+
+# Interface graphique
+PySide6>=6.6.0
+
+# Calcul numérique
+numpy>=1.24.0
+
+# Visualisation
+matplotlib>=3.7.0
+
+# Optionnel - Pour tests et développement
+pytest>=7.4.0
+pytest-qt>=4.2.0
+
+# Optionnel - Pour export PDF avancé
+reportlab>=4.0.0
