@@ -1,0 +1,4 @@
+gurobipy
+PyQt6
+matplotlib
+numpy
