@@ -81,12 +81,21 @@ class ApplicationLauncher(QMainWindow):
                 "color": "#FF9800"
             },
             {
-                "name": "Yassine Kolsi ",
+                "name": "Yassine Kolsi",
                 "icon": "👨‍🎓",
                 "description": "Problème 2 - Application 3",
                 "folder": "Kolsi/src",
                 "file": "main.py",
                 "color": "#9C27B0"
+            },
+            {
+                "name": "Youssef Gargouri",
+                "icon": "🚀",
+                "description": "Routage Personnel - Maintenance (Backend + UI)",
+                "folder": "Doj",
+                "file": "main_window.py",
+                "color": "#E91E63",
+                "needs_backend": True
             }
         ]
         
@@ -170,6 +179,12 @@ class ApplicationLauncher(QMainWindow):
     def launch_app(self, app_info):
         """Lance une application"""
         app_name = app_info['name']
+        
+        # Cas spécial : Application avec backend
+        if app_info.get('needs_backend', False):
+            self.launch_app_with_backend(app_info)
+            return
+        
         folder = self.project_root / app_info['folder']
         file_path = folder / app_info['file']
         
@@ -210,6 +225,97 @@ class ApplicationLauncher(QMainWindow):
         process.start(python_exe, [app_info['file']])
         
         self.processes[app_name] = process
+    
+    def launch_app_with_backend(self, app_info):
+        """Lance une application avec son backend d'abord"""
+        app_name = app_info['name']
+        backend_name = f"{app_name} (Backend)"
+        ui_name = f"{app_name} (UI)"
+        
+        # Vérifier si déjà lancé
+        if backend_name in self.processes and self.processes[backend_name].state() == QProcess.Running:
+            reply = QMessageBox.question(
+                self,
+                "Application Déjà Lancée",
+                f"L'application {app_name} est déjà en cours d'exécution.\nVoulez-vous la relancer ?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                # Fermer backend et UI
+                if backend_name in self.processes:
+                    self.processes[backend_name].kill()
+                    self.processes[backend_name].waitForFinished()
+                if ui_name in self.processes:
+                    self.processes[ui_name].kill()
+                    self.processes[ui_name].waitForFinished()
+            else:
+                return
+        
+        # 1. Lancer le Backend
+        backend_folder = self.project_root / app_info['folder'] / "backend"
+        backend_file = backend_folder / "main.py"
+        
+        if not backend_file.exists():
+            QMessageBox.critical(
+                self,
+                "Erreur",
+                f"Le fichier backend/main.py n'existe pas dans {app_info['folder']}"
+            )
+            return
+        
+        backend_process = QProcess(self)
+        backend_process.setWorkingDirectory(str(backend_folder))
+        backend_process.started.connect(lambda: self.on_backend_started(app_name))
+        backend_process.errorOccurred.connect(lambda error: self.on_app_error(backend_name, error))
+        
+        python_exe = sys.executable
+        backend_process.start(python_exe, ["main.py"])
+        
+        self.processes[backend_name] = backend_process
+        
+        # 2. Attendre 2 secondes puis lancer l'UI
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(2000, lambda: self.launch_ui_after_backend(app_info, ui_name))
+    
+    def on_backend_started(self, app_name):
+        """Callback quand le backend démarre"""
+        QMessageBox.information(
+            self,
+            "Backend Lancé",
+            f"✅ Backend de {app_name} démarré!\n\nL'interface va se lancer dans 2 secondes..."
+        )
+    
+    def launch_ui_after_backend(self, app_info, ui_name):
+        """Lance l'UI après que le backend ait démarré"""
+        ui_folder = self.project_root / app_info['folder'] / "ui"
+        ui_file = ui_folder / app_info['file']
+        
+        if not ui_file.exists():
+            QMessageBox.critical(
+                self,
+                "Erreur",
+                f"Le fichier {app_info['file']} n'existe pas dans {ui_folder}"
+            )
+            return
+        
+        ui_process = QProcess(self)
+        ui_process.setWorkingDirectory(str(ui_folder))
+        ui_process.started.connect(lambda: self.on_ui_started(app_info['name']))
+        ui_process.finished.connect(lambda exit_code, exit_status: self.on_app_finished(ui_name, exit_code))
+        ui_process.errorOccurred.connect(lambda error: self.on_app_error(ui_name, error))
+        
+        python_exe = sys.executable
+        ui_process.start(python_exe, [app_info['file']])
+        
+        self.processes[ui_name] = ui_process
+    
+    def on_ui_started(self, app_name):
+        """Callback quand l'UI démarre"""
+        QMessageBox.information(
+            self,
+            "Interface Lancée",
+            f"✅ Interface de {app_name} lancée avec succès!\n\nL'application est maintenant prête."
+        )
     
     def on_app_started(self, app_name):
         """Callback quand une application démarre"""
