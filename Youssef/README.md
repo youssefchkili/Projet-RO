@@ -24,33 +24,52 @@ Application simplifiée de **Programmation Linéaire Mixte en Nombres Entiers (P
 
 ## 🔧 Modélisation PLNE
 
+### Ensembles
+- **I** : Ensemble des villes (indices i = 1, ..., n)
+- **J** : Ensemble des sites candidats (indices j = 1, ..., m)
+
 ### Variables de Décision
-- **y[j] ∈ {0,1}** : 1 si l'hôpital j est ouvert, 0 sinon
-- **x[i,j] ∈ {0,1}** : 1 si la ville i est affectée à l'hôpital j, 0 sinon
+- **$y_j \in \{0,1\}$** : 1 si l'hôpital j est ouvert, 0 sinon (∀j ∈ J)
+- **$x_{ij} \in \{0,1\}$** : 1 si la ville i est affectée à l'hôpital j, 0 sinon (∀i ∈ I, ∀j ∈ J)
+
+### Paramètres
+- **$f_j$** : Coût fixe d'ouverture de l'hôpital j (€)
+- **$d_i$** : Demande de la ville i (nombre de patients)
+- **$c_j$** : Capacité de l'hôpital j (patients)
+- **$\delta_{ij}$** : Distance entre la ville i et le site j (km)
+- **$\tau$** : Coût de transport par km et par patient (€/km/patient)
+- **$q_j$** : Niveau de qualité du site j (score 0-100)
+- **$B$** : Budget disponible total (€)
+- **$D_{max}$** : Distance maximale autorisée (60 km)
 
 ### Fonction Objectif
-```
-MIN: α × (Coûts fixes + Coûts transport) - β × Qualité totale
-```
-- α : poids du coût économique (défaut: 0.7)
-- β : poids de la qualité de service (défaut: 0.3)
+
+$$\min Z = \alpha \left( \sum_{j \in J} f_j y_j + \sum_{i \in I} \sum_{j \in J} \tau \cdot \delta_{ij} \cdot d_i \cdot x_{ij} \right) - \beta \sum_{i \in I} \sum_{j \in J} q_j \cdot d_i \cdot x_{ij}$$
+
+Où :
+- **α** : Pondération du coût économique (défaut: 0.7)
+- **β** : Pondération de la qualité de service (défaut: 0.3)
 
 ### Contraintes
-1. **Affectation unique** : Chaque ville affectée à exactement un hôpital
-2. **Capacité** : Demande affectée ≤ Capacité × Ouverture
-3. **Distance maximale** : Distance ≤ 60 km pour les affectations
-4. **Budget** : Somme des coûts fixes ≤ Budget disponible
-5. **Lien logique** : Affectation possible uniquement si hôpital ouvert
 
-### Paramètres (8 catégories)
-1. Coordonnées géographiques (X, Y)
-2. Demande (nombre de patients par ville)
-3. Coûts fixes d'ouverture
-4. Capacités des sites
-5. Distances (euclidiennes)
-6. Coût de transport (€/km/patient)
-7. Niveaux de qualité (0-100)
-8. Budget disponible
+**1. Affectation unique**
+$$\sum_{j \in J} x_{ij} = 1 \quad \forall i \in I$$
+
+**2. Contrainte de capacité**
+$$\sum_{i \in I} d_i \cdot x_{ij} \leq c_j \cdot y_j \quad \forall j \in J$$
+
+**3. Distance maximale**
+$$\delta_{ij} \cdot x_{ij} \leq D_{max} \quad \forall i \in I, \forall j \in J$$
+
+**4. Budget**
+$$\sum_{j \in J} f_j \cdot y_j \leq B$$
+
+**5. Lien logique**
+$$x_{ij} \leq y_j \quad \forall i \in I, \forall j \in J$$
+
+**6. Domaines**
+$$y_j \in \{0,1\} \quad \forall j \in J$$
+$$x_{ij} \in \{0,1\} \quad \forall i \in I, \forall j \in J$$
 
 ---
 
