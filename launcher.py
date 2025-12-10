@@ -87,6 +87,14 @@ class ApplicationLauncher(QMainWindow):
                 "folder": "Kolsi/src",
                 "file": "main.py",
                 "color": "#9C27B0"
+            },
+            {
+                "name": "Doj",
+                "icon": "🔧",
+                "description": "Maintenance Routing Application",
+                "folder": "Doj",
+                "file": "start_app.ps1",
+                "color": "#607D8B"
             }
         ]
         
@@ -146,7 +154,7 @@ class ApplicationLauncher(QMainWindow):
             }}
         """
         btn.setStyleSheet(btn_style)
-        btn.clicked.connect(lambda checked, info=app_info: self.launch_app(info))
+        btn.clicked.connect(lambda checked=False, info=app_info: self.launch_app(info))
         
         container_layout.addWidget(btn)
         
@@ -206,8 +214,11 @@ class ApplicationLauncher(QMainWindow):
         process.errorOccurred.connect(lambda error: self.on_app_error(app_name, error))
         
         # Lancer le processus
-        python_exe = sys.executable
-        process.start(python_exe, [app_info['file']])
+        if app_info['file'].endswith('.ps1'):
+            process.start("powershell", ["-ExecutionPolicy", "Bypass", "-File", app_info['file']])
+        else:
+            python_exe = sys.executable
+            process.start(python_exe, [app_info['file']])
         
         self.processes[app_name] = process
     
