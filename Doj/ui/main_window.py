@@ -5,9 +5,10 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTableWidget, QTableWidgetItem, QMessageBox,
                              QDialog, QFormLayout, QLineEdit, QComboBox, 
                              QSpinBox, QTextEdit, QCheckBox, QHeaderView,
-                             QGroupBox, QGridLayout)
+                             QGroupBox, QGridLayout, QSplitter)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QColor
+from visualization import RouteVisualizer
 
 API_URL = "http://localhost:5000/api"
 
@@ -339,7 +340,10 @@ class MainWindow(QMainWindow):
         
         layout.addLayout(toolbar)
         
-        # Routes display
+        # Splitter for text and visualization
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # Routes display (Text)
         self.routes_text = QTextEdit()
         self.routes_text.setReadOnly(True)
         self.routes_text.setStyleSheet("""
@@ -352,8 +356,16 @@ class MainWindow(QMainWindow):
                 padding: 10px;
             }
         """)
+        splitter.addWidget(self.routes_text)
         
-        layout.addWidget(self.routes_text)
+        # Visualization
+        self.visualizer = RouteVisualizer()
+        splitter.addWidget(self.visualizer)
+        
+        # Set initial sizes (40% text, 60% visualizer)
+        splitter.setSizes([400, 600])
+        
+        layout.addWidget(splitter)
         
         return widget
     
@@ -533,6 +545,9 @@ class MainWindow(QMainWindow):
                     les tournées en fonction des compétences et des distances.</p>
                 </div>
             """)
+            # Reset visualization
+            if hasattr(self, 'visualizer'):
+                self.visualizer.show_placeholder()
             return
         
         latest_route = self.routes[-1]
@@ -588,6 +603,10 @@ class MainWindow(QMainWindow):
             html += "</div>"
         
         self.routes_text.setHtml(html)
+        
+        # Update visualization
+        if hasattr(self, 'visualizer') and hasattr(self, 'technicians'):
+            self.visualizer.update_routes(latest_route['routes'], self.technicians)
     
     def optimize_routes(self):
         """Optimize routes"""
@@ -772,12 +791,24 @@ class TechnicianDialog(QDialog):
     
     def get_data(self):
         skills = [skill for skill, check in self.skill_checks.items() if check.isChecked()]
+        # Generate random coordinates around Paris for diversity
+        import random
+        base_lat = 48.8566
+        base_lng = 2.3522
+        # Add variation of +/- 0.15 degrees for technician homes
+        lat_offset = (random.random() - 0.5) * 0.3
+        lng_offset = (random.random() - 0.5) * 0.3
+        
         return {
             'name': self.name_input.text(),
             'skills': skills,
             'maxTasksPerDay': self.capacity_input.value(),
             'available': self.available_check.isChecked(),
-            'location': {'lat': 48.8566, 'lng': 2.3522, 'address': ''}
+            'location': {
+                'lat': base_lat + lat_offset,
+                'lng': base_lng + lng_offset,
+                'address': ''
+            }
         }
 
 
@@ -843,6 +874,14 @@ class TaskDialog(QDialog):
             self.address_input.setText(task['location'].get('address', ''))
     
     def get_data(self):
+        # Generate random coordinates around Paris for diversity
+        import random
+        base_lat = 48.8566
+        base_lng = 2.3522
+        # Add variation of +/- 0.1 degrees (roughly 10km)
+        lat_offset = (random.random() - 0.5) * 0.2
+        lng_offset = (random.random() - 0.5) * 0.2
+        
         return {
             'title': self.title_input.text(),
             'description': self.description_input.toPlainText(),
@@ -850,8 +889,8 @@ class TaskDialog(QDialog):
             'priority': self.priority_combo.currentText(),
             'duration': self.duration_input.value(),
             'location': {
-                'lat': 48.8566,
-                'lng': 2.3522,
+                'lat': base_lat + lat_offset,
+                'lng': base_lng + lng_offset,
                 'address': self.address_input.text()
             }
         }
